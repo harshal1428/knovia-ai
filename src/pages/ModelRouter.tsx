@@ -1,21 +1,22 @@
 const routes = [
-  { query: "Simple query / data lookup", complexity: "Simple", model: "No LLM — Direct Retrieval", latency: "<100ms", vram: "—", path: "fast", color: "#0F766E" },
+  { query: "Simple query / data lookup", complexity: "Simple", model: "Qwen2.5-Omni-3B", latency: "<100ms", vram: "3 GB", path: "fast", color: "#0F766E" },
   { query: "Keyword / structured search", complexity: "Simple", model: "BM25 / SQL", latency: "<200ms", vram: "—", path: "fast", color: "#0F766E" },
-  { query: "General reasoning & summarization", complexity: "Normal", model: "Small Local LLM (7B)", latency: "1–3s", vram: "8 GB", path: "knowledge", color: "#2563EB" },
-  { query: "Document analysis / QA", complexity: "Medium", model: "Small LLM + RAG", latency: "2–5s", vram: "8 GB", path: "knowledge", color: "#2563EB" },
-  { query: "Complex reasoning & planning", complexity: "Complex", model: "Reasoning Model (32B)", latency: "8–20s", vram: "24 GB", path: "complex", color: "#7C3AED" },
-  { query: "Image analysis / inspection photo", complexity: "Medium", model: "Vision Model", latency: "2–6s", vram: "12 GB", path: "knowledge", color: "#2563EB" },
-  { query: "Speech / voice transcription", complexity: "Simple", model: "Speech Model (Whisper)", latency: "Real-time", vram: "4 GB", path: "fast", color: "#0F766E" },
-  { query: "Code generation / debugging", complexity: "Complex", model: "Coding Model (CodeLLaMA)", latency: "3–10s", vram: "16 GB", path: "complex", color: "#7C3AED" },
+  { query: "General reasoning & summarization", complexity: "Normal", model: "Qwen3-8B", latency: "1–3s", vram: "8 GB", path: "knowledge", color: "#2563EB" },
+  { query: "Document analysis / QA", complexity: "Medium", model: "Qwen2.5-VL-7B", latency: "2–5s", vram: "7 GB", path: "knowledge", color: "#2563EB" },
+  { query: "Complex industrial reasoning", complexity: "Complex", model: "InternVL3-8B", latency: "2–4s", vram: "8 GB", path: "complex", color: "#7C3AED" },
+  { query: "Multimodal Voice + Vision + Text", complexity: "Medium", model: "Qwen2.5-Omni-7B", latency: "2–6s", vram: "7 GB", path: "knowledge", color: "#2563EB" },
+  { query: "Speech / voice transcription", complexity: "Simple", model: "Whisper large-v3", latency: "Real-time", vram: "3 GB", path: "fast", color: "#0F766E" },
 ];
 
 const models = [
-  { name: "Reasoning Model (QwQ-32B)", type: "Reasoning", status: "Active", vram: "24 GB / 40 GB", latency: "12s avg", queue: 2 },
-  { name: "Small LLM (Llama-3.1-8B)", type: "General", status: "Active", vram: "8 GB / 24 GB", latency: "1.8s avg", queue: 0 },
-  { name: "Coding Model (CodeLLaMA-34B)", type: "Code", status: "Active", vram: "20 GB / 40 GB", latency: "5.2s avg", queue: 1 },
-  { name: "Vision Model (LLaVA-13B)", type: "Vision", status: "Active", vram: "13 GB / 24 GB", latency: "3.1s avg", queue: 0 },
-  { name: "Speech Model (Whisper-Large)", type: "Speech", status: "Active", vram: "3 GB / 8 GB", latency: "RT", queue: 0 },
-  { name: "Embedding Model (BGE-M3)", type: "Embedding", status: "Active", vram: "4 GB / 8 GB", latency: "50ms avg", queue: 0 },
+  { name: "Reasoning Model (Qwen3-8B)", type: "Reasoning", status: "Active", vram: "8 GB / 12 GB", latency: "1.8s avg", queue: 0 },
+  { name: "Vision Model (Qwen2.5-VL-7B)", type: "Vision", status: "Active", vram: "7 GB / 12 GB", latency: "2.1s avg", queue: 0 },
+  { name: "Industrial Vision (InternVL3-8B)", type: "Vision", status: "Active", vram: "8 GB / 12 GB", latency: "2.4s avg", queue: 1 },
+  { name: "Omni Model (Qwen2.5-Omni-7B)", type: "Omni", status: "Active", vram: "7 GB / 12 GB", latency: "2.5s avg", queue: 0 },
+  { name: "Lightweight Omni (Qwen2.5-Omni-3B)", type: "Omni", status: "Active", vram: "3 GB / 12 GB", latency: "0.8s avg", queue: 0 },
+  { name: "Speech Model (Whisper large-v3)", type: "Speech", status: "Active", vram: "3 GB / 12 GB", latency: "RT", queue: 0 },
+  { name: "Embedding Model (BGE-M3)", type: "Embedding", status: "Active", vram: "2 GB / 12 GB", latency: "45ms avg", queue: 0 },
+  { name: "Reranker (BGE-Reranker-v2)", type: "Reranking", status: "Active", vram: "1 GB / 12 GB", latency: "30ms avg", queue: 0 },
 ];
 
 const pathColors: Record<string, string> = { fast: "#0F766E", knowledge: "#2563EB", complex: "#7C3AED" };

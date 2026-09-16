@@ -36,14 +36,32 @@ export type Page =
   | "verification"
   | "data-query";
 
+export type Project = {
+  name: string;
+  owner: string;
+  dept: string;
+  status: string;
+  progress: number;
+  tasks: number;
+  artifacts: number;
+  cls: string;
+  agents: string[];
+  updated: string;
+  contributors: string[];
+};
+
 export type NavContextType = {
   currentPage: Page;
   navigate: (page: Page) => void;
+  projects: Project[];
+  updateProject: (name: string, updates: Partial<Project>) => void;
 };
 
 export const NavContext = createContext<NavContextType>({
   currentPage: "dashboard",
   navigate: () => {},
+  projects: [],
+  updateProject: () => {},
 });
 
 export const useNav = () => useContext(NavContext);

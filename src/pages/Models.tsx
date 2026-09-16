@@ -1,10 +1,12 @@
 const models = [
-  { name: "QwQ-32B", type: "Reasoning", size: "32B", vram: "24 GB", context: "128K", status: "Active", latency: "12s avg", quantization: "Q4_K_M", use: "Complex planning, multi-step reasoning" },
-  { name: "Llama-3.1-8B", type: "General", size: "8B", vram: "8 GB", context: "128K", status: "Active", latency: "1.8s avg", quantization: "Q4_K_M", use: "General reasoning, summarization, Q&A" },
-  { name: "CodeLLaMA-34B", type: "Code", size: "34B", vram: "20 GB", context: "100K", status: "Active", latency: "5.2s avg", quantization: "Q4_K_M", use: "Code generation, debugging, analysis" },
-  { name: "LLaVA-13B", type: "Vision", size: "13B", vram: "13 GB", context: "4K", status: "Active", latency: "3.1s avg", quantization: "Q5_K_M", use: "Image analysis, inspection photos, drawings" },
-  { name: "Whisper-Large-v3", type: "Speech", size: "1.5B", vram: "3 GB", context: "30s audio", status: "Active", latency: "Real-time", quantization: "FP16", use: "Voice transcription, meeting notes" },
-  { name: "BGE-M3", type: "Embedding", size: "0.6B", vram: "4 GB", context: "8192 tokens", status: "Active", latency: "45ms avg", quantization: "FP16", use: "Semantic embeddings for vector search" },
+  { name: "Qwen3-8B", type: "Reasoning", size: "8B", vram: "8 GB", context: "128K", status: "Active", latency: "1.8s avg", quantization: "Q4_K_M", use: "Text reasoning, summarization, Q&A" },
+  { name: "Qwen2.5-VL-7B", type: "Vision", size: "7B", vram: "7 GB", context: "32K", status: "Active", latency: "2.1s avg", quantization: "Q4_K_M", use: "Image/document analysis" },
+  { name: "InternVL3-8B", type: "Vision", size: "8B", vram: "8 GB", context: "32K", status: "Active", latency: "2.4s avg", quantization: "Q4_K_M", use: "Industrial vision, inspection photos" },
+  { name: "Qwen2.5-Omni-7B", type: "Omni", size: "7B", vram: "7 GB", context: "32K", status: "Active", latency: "2.5s avg", quantization: "Q4_K_M", use: "Voice + image + video + text" },
+  { name: "Qwen2.5-Omni-3B", type: "Omni", size: "3B", vram: "3 GB", context: "32K", status: "Active", latency: "0.8s avg", quantization: "Q4_K_M", use: "Lightweight omni processing" },
+  { name: "Whisper large-v3", type: "Speech", size: "1.5B", vram: "3 GB", context: "30s audio", status: "Active", latency: "Real-time", quantization: "FP16", use: "Speech-to-text only" },
+  { name: "BGE-M3", type: "Embedding", size: "0.6B", vram: "2 GB", context: "8192 tokens", status: "Active", latency: "45ms avg", quantization: "FP16", use: "Multilingual embeddings" },
+  { name: "BGE-Reranker", type: "Reranking", size: "0.3B", vram: "1 GB", context: "4096 tokens", status: "Active", latency: "30ms avg", quantization: "FP16", use: "Reranking search results" },
 ];
 
 const typeColors: Record<string, { bg: string; color: string }> = {
@@ -14,6 +16,8 @@ const typeColors: Record<string, { bg: string; color: string }> = {
   Vision: { bg: "#FEF3C7", color: "#92400E" },
   Speech: { bg: "#F0FDF4", color: "#15803D" },
   Embedding: { bg: "#F1F5F9", color: "#475569" },
+  Omni: { bg: "#FAE8FF", color: "#A21CAF" },
+  Reranking: { bg: "#E0E7FF", color: "#4338CA" },
 };
 
 export default function Models() {
@@ -27,8 +31,8 @@ export default function Models() {
 
         <div className="mb-6 px-5 py-3 rounded flex items-center gap-3" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
           <span>🟢</span>
-          <span className="text-sm font-medium" style={{ color: "#15803D" }}>6 models active · 0 external APIs · Internet: Blocked</span>
-          <span className="ml-auto text-xs" style={{ color: "#15803D" }}>Total VRAM: 72 GB / 184 GB available</span>
+          <span className="text-sm font-medium" style={{ color: "#15803D" }}>8 models active · 0 external APIs · Internet: Blocked</span>
+          <span className="ml-auto text-xs" style={{ color: "#15803D" }}>Total VRAM: 39 GB / 64 GB available</span>
         </div>
 
         <div className="space-y-3">

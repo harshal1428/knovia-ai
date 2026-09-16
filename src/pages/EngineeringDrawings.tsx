@@ -5,6 +5,29 @@ const workflowSteps = ["Requirement", "Engineering Agent", "Structured Specifica
 export default function EngineeringDrawings() {
   const [activeStep, setActiveStep] = useState(3);
   const [requirement, setRequirement] = useState("Generate a preliminary P&ID schematic for the CDU-4 reflux pump circuit, including P-102A/B, control valves FV-102 and FV-103, pressure indicators, and associated isolation valves.");
+  const [qaInput, setQaInput] = useState("");
+
+  const downloadDrawing = (fmt: string) => {
+    let content = "";
+    if (fmt === "SVG") {
+      content = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380"><text y="20" font-family="sans-serif">MRPL-CDU4-PID-012 — AI-GENERATED PRELIMINARY DRAFT</text></svg>`;
+    } else {
+      content = `Mock ${fmt} binary content for MRPL-CDU4-PID-012`;
+    }
+
+    const mime = fmt === "SVG" ? "image/svg+xml" : "application/octet-stream";
+    const ext = fmt.toLowerCase();
+
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `MRPL-CDU4-PID-012.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: "var(--color-bg-secondary)" }}>
@@ -121,7 +144,7 @@ export default function EngineeringDrawings() {
                 <div className="font-semibold text-sm" style={{ color: "var(--color-text-primary)" }}>Drawing Preview</div>
                 <div className="flex gap-2">
                   {["SVG", "DXF", "PDF"].map((fmt) => (
-                    <button key={fmt} className="text-xs px-2.5 py-1 rounded border font-medium" style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)", fontSize: 11 }}>↓ {fmt}</button>
+                    <button key={fmt} onClick={() => downloadDrawing(fmt)} className="text-xs px-2.5 py-1 rounded border font-medium hover:bg-slate-50 transition-colors" style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)", fontSize: 11 }}>↓ {fmt}</button>
                   ))}
                 </div>
               </div>
@@ -187,6 +210,19 @@ export default function EngineeringDrawings() {
                 <div className="mt-3 text-center text-xs font-semibold py-2 rounded" style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FDE68A" }}>
                   AI-GENERATED — ENGINEERING REVIEW REQUIRED BEFORE USE
                 </div>
+              </div>
+              <div className="border-t p-4 flex items-center gap-3" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-subtle)" }}>
+                <input 
+                  type="text" 
+                  value={qaInput}
+                  onChange={(e) => setQaInput(e.target.value)}
+                  placeholder="Ask the Engineering Agent to review or modify this drawing..." 
+                  className="flex-1 px-3 py-2 text-sm rounded border outline-none bg-white" 
+                  style={{ borderColor: "var(--color-border)" }}
+                />
+                <button className="text-sm px-4 py-2 rounded font-medium text-white transition-colors hover:bg-teal-700" style={{ background: "var(--color-teal)" }}>
+                  Send
+                </button>
               </div>
             </div>
           </div>

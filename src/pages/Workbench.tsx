@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNav } from "../context/NavContext";
 
 type ExecutionMode = "auto" | "manual";
@@ -15,6 +15,22 @@ type Message = {
     sources?: number;
     verified?: boolean;
   };
+  artifact?: {
+    name: string;
+    status: "pending_approval" | "approved";
+  };
+};
+
+type GenerationStep = { label: string; status: "pending" | "active" | "completed" };
+
+type GenerationState = {
+  active: boolean;
+  steps: GenerationStep[];
+  progress: number;
+  startTime: number;
+  duration: number;
+  questionType: "simple" | "medium" | "complex";
+  artifactGen?: boolean;
 };
 
 const demoMessages: Message[] = [
@@ -51,34 +67,131 @@ const pathLabels: Record<string, string> = {
 };
 
 export default function Workbench() {
-  const { navigate } = useNav();
+  const { navigate, projects } = useNav();
   const [messages, setMessages] = useState<Message[]>(demoMessages);
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<ExecutionMode>("auto");
   const [selectedAgent, setSelectedAgent] = useState("Research Agent");
   const [showRouter, setShowRouter] = useState(true);
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [leftCollapsed, setLeftCollapsed] = useState(true);
   const [rightCollapsed, setRightCollapsed] = useState(true);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const [currentProject, setCurrentProject] = useState("CDU-4 Inspection Analysis");
+  const [currentProjectName, setCurrentProjectName] = useState(projects[0]?.name || "CDU-4 Inspection Analysis");
+  
+  const currentProject = projects.find(p => p.name === currentProjectName) || projects[0];
+
+  const [generation, setGeneration] = useState<GenerationState | null>(null);
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || generation?.active) return;
     const userMsg: Message = { id: messages.length + 1, role: "user", content: input };
-    const paths: ExecutionPath[] = ["fast", "knowledge", "complex"];
-    const path = paths[Math.floor(Math.random() * 3)];
-    const aiMsg: Message = {
-      id: messages.length + 2,
-      role: "assistant",
-      content: path === "fast"
-        ? "Retrieving directly from MRPL project database..."
-        : path === "knowledge"
-        ? "Hybrid retrieval complete. Cross-referencing 4 documents against MRPL knowledge base..."
-        : "Initiating multi-agent analysis. Planner → Document Agent → Engineering Agent → Verification...",
-      meta: { path, agent: mode === "manual" ? selectedAgent : "Auto Selected", model: "Auto Routed" },
-    };
-    setMessages([...messages, userMsg, aiMsg]);
+    setMessages([...messages, userMsg]);
     setInput("");
+
+    const lowerInput = input.toLowerCase();
+    let qType: "simple" | "medium" | "complex" = "simple";
+    let duration = 3; // 3 sec default
+    let hasArtifact = false;
+
+    if (lowerInput.includes("plan") || lowerInput.includes("complex") || lowerInput.includes("turnaround")) {
+      qType = "complex";
+      duration = 120; // 2 mins
+      hasArtifact = true;
+    } else if (lowerInput.includes("analyze") || lowerInput.includes("report") || lowerInput.includes("compare")) {
+      qType = "medium";
+      duration = 30; // 30 sec
+      hasArtifact = true;
+    }
+
+    let steps: GenerationStep[] = [];
+    if (qType === "complex") {
+      steps = [
+        { label: "Analyzing multi-agent requirements", status: "active" },
+        { label: "Delegating tasks to Research & Engineering agents", status: "pending" },
+        { label: "Running simulations in Sandbox", status: "pending" },
+        { label: "Generating artifacts and blueprints", status: "pending" },
+        { label: "Finalizing output & awaiting approval", status: "pending" }
+      ];
+    } else if (qType === "medium") {
+      steps = [
+        { label: "Retrieving documents via Hybrid RAG", status: "active" },
+        { label: "Cross-referencing compliance rules", status: "pending" },
+        { label: "Generating summary artifact", status: "pending" },
+        { label: "Finalizing", status: "pending" }
+      ];
+    } else {
+      steps = [
+        { label: "Drafting response", status: "active" }
+      ];
+    }
+
+    setGeneration({
+      active: true,
+      steps: steps,
+      progress: 0,
+      startTime: Date.now(),
+      duration: duration,
+      questionType: qType,
+      artifactGen: hasArtifact
+    });
+  };
+
+  // Chat generation simulation loop
+  import_useEffect_if_needed: {
+    // (using React.useEffect inline below to avoid changing top-level imports)
+  }
+  
+  // Simulate active generation
+  import_react: React.useEffect(() => {
+    if (!generation?.active) return;
+
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - generation.startTime) / 1000;
+      const progress = Math.min((elapsed / generation.duration) * 100, 100);
+      
+      let newSteps = [...generation.steps];
+      if (generation.questionType === "complex") {
+        if (progress < 10) newSteps = newSteps.map((s,i) => i===0 ? {...s, status: "active"} : {...s, status: "pending"});
+        else if (progress < 30) newSteps = newSteps.map((s,i) => i<1 ? {...s, status: "completed"} : i===1 ? {...s, status: "active"} : {...s, status: "pending"});
+        else if (progress < 60) newSteps = newSteps.map((s,i) => i<2 ? {...s, status: "completed"} : i===2 ? {...s, status: "active"} : {...s, status: "pending"});
+        else if (progress < 85) newSteps = newSteps.map((s,i) => i<3 ? {...s, status: "completed"} : i===3 ? {...s, status: "active"} : {...s, status: "pending"});
+        else newSteps = newSteps.map((s,i) => i<4 ? {...s, status: "completed"} : i===4 ? {...s, status: "active"} : {...s, status: "pending"});
+      } else if (generation.questionType === "medium") {
+        if (progress < 20) newSteps = newSteps.map((s,i) => i===0 ? {...s, status: "active"} : {...s, status: "pending"});
+        else if (progress < 60) newSteps = newSteps.map((s,i) => i<1 ? {...s, status: "completed"} : i===1 ? {...s, status: "active"} : {...s, status: "pending"});
+        else if (progress < 90) newSteps = newSteps.map((s,i) => i<2 ? {...s, status: "completed"} : i===2 ? {...s, status: "active"} : {...s, status: "pending"});
+        else newSteps = newSteps.map((s,i) => i<3 ? {...s, status: "completed"} : i===3 ? {...s, status: "active"} : {...s, status: "pending"});
+      }
+
+      setGeneration((prev) => prev ? { ...prev, progress, steps: newSteps } : null);
+
+      if (elapsed >= generation.duration) {
+        clearInterval(interval);
+        const path = generation.questionType === "complex" ? "complex" : generation.questionType === "medium" ? "knowledge" : "fast";
+        const content = generation.questionType === "complex" 
+          ? "I have generated the comprehensive turnaround plan and associated artifacts. Please review the attached execution DAG and resource allocation blueprint."
+          : generation.questionType === "medium"
+          ? "Analysis complete. I've cross-referenced the reports and generated a summary document highlighting the key discrepancies."
+          : "Hello! I am Sovereign AI, ready to assist you with MRPL operations. How can I help you today?";
+        
+        const aiMsg: Message = {
+          id: Date.now(),
+          role: "assistant",
+          content,
+          meta: { path, agent: mode === "manual" ? selectedAgent : "Auto Selected", model: "Sovereign-1 (Local)", verified: true },
+          artifact: generation.artifactGen ? { name: generation.questionType === "complex" ? "Turnaround_Plan_v1.pdf" : "Analysis_Report.csv", status: "pending_approval" } : undefined
+        };
+        
+        setMessages((prev) => [...prev, aiMsg]);
+        setGeneration(null);
+      }
+    }, 500); // 500ms tick
+
+    return () => clearInterval(interval);
+  }, [generation?.active, generation?.startTime, generation?.duration, generation?.questionType, generation?.artifactGen, mode, selectedAgent]);
+
+  const approveArtifact = (msgId: number) => {
+    setMessages((prev) => prev.map(m => m.id === msgId && m.artifact ? { ...m, artifact: { ...m.artifact, status: "approved" } } : m));
   };
 
   return (
@@ -87,25 +200,31 @@ export default function Workbench() {
       <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-slate-200 flex-shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-3">
           <span className="text-xs font-medium text-slate-500">Project:</span>
-          <span className="text-sm font-semibold text-slate-900 truncate max-w-[200px]">{currentProject}</span>
+          <span className="text-sm font-semibold text-slate-900 truncate max-w-[200px]">{currentProject.name}</span>
           <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-            🔒 CONFIDENTIAL
+            🔒 {currentProject.cls}
           </span>
         </div>
         
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 mr-2">
-            <span className="text-xs text-slate-500 mr-2">3 contributors</span>
+            <span className="text-xs text-slate-500 mr-2">{currentProject.contributors?.length || 0} contributors</span>
             <div className="flex -space-x-2">
-              {["A", "B", "C"].map((l, i) => (
+              {currentProject.contributors?.slice(0, 3).map((c, i) => (
                 <div
                   key={i}
+                  title={c}
                   className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-white shadow-sm"
-                  style={{ background: ["#0F766E", "#2563EB", "#7C3AED"][i] }}
+                  style={{ background: ["#0F766E", "#2563EB", "#7C3AED"][i % 3] }}
                 >
-                  {l}
+                  {c.split(" ").map(n => n[0]).join("")}
                 </div>
               ))}
+              {currentProject.contributors?.length > 3 && (
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold bg-slate-200 text-slate-600 border-2 border-white shadow-sm">
+                  +{currentProject.contributors.length - 3}
+                </div>
+              )}
             </div>
           </div>
           <div className="h-6 w-px bg-slate-200 mx-1"></div>
@@ -149,14 +268,14 @@ export default function Workbench() {
           <div className="w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col overflow-y-auto transition-all">
             <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 bg-slate-50/50 gap-2">
               <select 
-                value={currentProject}
-                onChange={(e) => setCurrentProject(e.target.value)}
+                value={currentProjectName}
+                onChange={(e) => setCurrentProjectName(e.target.value)}
                 className="text-sm font-medium text-slate-700 border border-slate-300 rounded-md px-2 py-1.5 outline-none bg-white cursor-pointer w-full truncate shadow-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500" 
                 title="Select Project"
               >
-                <option value="CDU-4 Inspection Analysis">CDU-4 Inspection Analysis</option>
-                <option value="Pump P-102 Maintenance">Pump P-102 Maintenance</option>
-                <option value="Q3 Safety Audit">Q3 Safety Audit</option>
+                {projects.map(p => (
+                  <option key={p.name} value={p.name}>{p.name}</option>
+                ))}
               </select>
               <button onClick={() => setLeftCollapsed(true)} className="text-slate-400 hover:text-slate-700 transition-colors p-1.5 rounded-md hover:bg-slate-200 flex-shrink-0" title="Close chat history">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
@@ -240,6 +359,29 @@ export default function Workbench() {
                   >
                     {msg.content}
                   </div>
+                  {msg.artifact && (
+                    <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center text-teal-600 shadow-sm border border-teal-200">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-slate-800">{msg.artifact.name}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {msg.artifact.status === "pending_approval" ? "Awaiting your approval to save..." : "Approved & Saved to Documents"}
+                          </div>
+                        </div>
+                      </div>
+                      {msg.artifact.status === "pending_approval" ? (
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => approveArtifact(msg.id)} className="text-xs px-3 py-1.5 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors shadow-sm">Approve</button>
+                          <button className="text-xs px-3 py-1.5 bg-white border border-slate-200 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">Reject</button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-md border border-green-200 uppercase tracking-wider shadow-sm">✓ Approved</span>
+                      )}
+                    </div>
+                  )}
                   {msg.meta?.path && (
                     <div className="mt-3 flex items-center gap-3 ml-1">
                       <span
@@ -268,6 +410,43 @@ export default function Workbench() {
                 </div>
               </div>
             ))}
+            
+            {/* Generation Indicator */}
+            {generation?.active && (
+              <div className="flex justify-start">
+                <div className="max-w-3xl flex flex-col items-start gap-2">
+                  <div className="flex items-center gap-2.5 ml-1">
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold bg-teal-600 text-white shadow-sm animate-pulse">
+                      AI
+                    </div>
+                    <span className="text-sm font-semibold text-slate-700">Sovereign AI Thinking...</span>
+                  </div>
+                  <div className="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm rounded-tl-sm min-w-[320px]">
+                    <div className="flex flex-col gap-3 mb-4">
+                      {generation.steps.map((step, idx) => (
+                        <div key={idx} className="flex items-center gap-3">
+                          {step.status === "completed" ? (
+                            <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                          ) : step.status === "active" ? (
+                            <div className="w-4 h-4 rounded-full border-2 border-slate-200 border-t-teal-500 animate-spin flex-shrink-0"></div>
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border-2 border-slate-200 flex-shrink-0"></div>
+                          )}
+                          <span className={`text-[13px] ${step.status === "active" ? "font-semibold text-slate-800" : step.status === "completed" ? "text-slate-500 line-through" : "text-slate-400"}`}>
+                            {step.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                      <div className="h-full bg-teal-500 transition-all duration-500 ease-linear" style={{ width: `${generation.progress}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Input */}
@@ -363,11 +542,11 @@ export default function Workbench() {
               <div className="text-sm font-semibold text-slate-800 mb-4">Project Context</div>
               <div className="space-y-4">
                 {[
-                  { label: "Documents", count: "7 files", icon: "◧", color: "text-blue-500" },
+                  { label: "Documents", count: `${currentProject.artifacts} files`, icon: "◧", color: "text-blue-500" },
                   { label: "Knowledge", count: "1.2K chunks", icon: "◈", color: "text-purple-500" },
                   { label: "Database", count: "MRPL PostgreSQL", icon: "⬡", color: "text-teal-500" },
                   { label: "Notes", count: "3 notes", icon: "◪", color: "text-amber-500" },
-                  { label: "Contributors", count: "3 active", icon: "◯", color: "text-rose-500" },
+                  { label: "Contributors", count: `${currentProject.contributors?.length || 0} active`, icon: "◯", color: "text-rose-500" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-100 ${item.color}`}>

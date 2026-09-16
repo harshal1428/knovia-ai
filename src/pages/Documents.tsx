@@ -27,6 +27,7 @@ export default function Documents() {
   const [uploading, setUploading] = useState(false);
   const [uploadStage, setUploadStage] = useState(0);
   const [selectedDoc, setSelectedDoc] = useState<number | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<typeof documents[0] | null>(null);
 
   const simulateUpload = () => {
     setUploading(true);
@@ -37,6 +38,45 @@ export default function Documents() {
         return s + 1;
       });
     }, 600);
+  };
+
+  const handleDownload = (doc: typeof documents[0]) => {
+    let content = "";
+    let mime = "";
+    let ext = "";
+    let blob: Blob;
+
+    if (doc.type === "XLSX" || doc.type === "CSV") {
+      content = "Date,Vibration_Level,Status\\n2026-09-15,6.5,Normal\\n2026-09-16,8.2,Critical\\n";
+      mime = "text/csv";
+      ext = "csv";
+      blob = new Blob([content], { type: mime });
+    } else if (doc.type === "PDF") {
+      // A minimal valid PDF file base64 string
+      const pdfBase64 = "JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nDP093QwNE1MTC4JLElNS8xL1QdyIHRuYm6qQW5iXkoqiB2XWlKUmZtYoeCsoKMAV24E1AEAE78QhQplbmRzdHJlYW0KZW5kb2JqCjMgMCBvYmoKNTkKZW5kb2JqCjQgMCBvYmoKPDwvVHlwZS9QYWdlL01lZGlhQm94WzAgMCA1OTUuMjggODQxLjg5XS9SZXNvdXJjZXM8PC9Gb250PDwvRjEgNSAwIFI+Pj4+L0NvbnRlbnRzIDIgMCBSL1BhcmVudCA2IDAgUj4+CmVuZG9iago1IDAgb2JqCjw8L1R5cGUvRm9udC9TdWJ0eXBlL1R5cGUxL0Jhc2VGb250L0hlbHZldGljYT4+CmVuZG9iago2IDAgb2JqCjw8L1R5cGUvUGFnZXMvQ291bnQgMS9LaWRzWzQgMCBSXT4+CmVuZG9iago3IDAgb2JqCjw8L1R5cGUvQ2F0YWxvZy9QYWdlcyA2IDAgUj4+CmVuZG9iagoxIDAgb2JqCjw8L1Byb2R1Y2VyKGR1bW15KS9DcmVhdGlvbkRhdGUoRDoyMDI2MDkxNjE3MDkwMCk+PgplbmRvYmoKeHJlZgowIDgKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwNDA0IDAwMDAwIG4gCjAwMDAwMDAwMTkgMDAwMDAgbiAKMDAwMDAwMDExNyAwMDAwMCBuIAowMDAwMDAwMTM2IDAwMDAwIG4gCjAwMDAwMDAyNjAgMDAwMDAgbiAKMDAwMDAwMDM0OCAwMDAwMCBuIAowMDAwMDAwNDA0IDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA4L1Jvb3QgNyAwIFIvSW5mbyAxIDAgUj4+CnN0YXJ0eHJlZgo0OTQKJSVFT0YK";
+      const byteCharacters = atob(pdfBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      blob = new Blob([byteArray], { type: "application/pdf" });
+      ext = "pdf";
+    } else {
+      content = "Mock document content for: " + doc.name + "\\n\\nClassification: " + doc.cls + "\\nVersion: " + doc.version + "\\nDate: " + doc.date;
+      mime = "text/plain";
+      ext = doc.type.toLowerCase();
+      blob = new Blob([content], { type: mime });
+    }
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${doc.name.replace(/\\s+/g, "_")}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -168,8 +208,9 @@ export default function Documents() {
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex gap-1">
-                      <button className="text-xs px-2 py-1 rounded border hover:bg-slate-100" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)", fontSize: 11 }}>View</button>
-                      <button className="text-xs px-2 py-1 rounded border hover:bg-slate-100" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)", fontSize: 11 }}>Query</button>
+                      <button onClick={(e) => { e.stopPropagation(); setViewingDoc(doc); }} className="text-xs px-2 py-1 rounded border hover:bg-slate-100 transition-colors" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)", fontSize: 11 }}>View</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDownload(doc); }} className="text-xs px-2 py-1 rounded border hover:bg-slate-100 transition-colors" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)", fontSize: 11 }}>Download</button>
+                      <button className="text-xs px-2 py-1 rounded border hover:bg-slate-100 transition-colors" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)", fontSize: 11 }}>Query</button>
                     </div>
                   </td>
                 </tr>
@@ -178,6 +219,55 @@ export default function Documents() {
           </table>
         </div>
       </div>
+
+      {viewingDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-8" style={{ background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)" }}>
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-full flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-subtle)" }}>
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: "var(--color-text-primary)" }}>{viewingDoc.name}</h2>
+                <div className="text-xs mt-1 space-x-2" style={{ color: "var(--color-text-secondary)" }}>
+                  <span className="font-mono px-1.5 py-0.5 rounded bg-white border">{viewingDoc.type}</span>
+                  <span>Version {viewingDoc.version}</span>
+                  <span>{viewingDoc.date}</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleDownload(viewingDoc)} className="text-sm px-4 py-2 rounded font-medium border hover:bg-slate-50" style={{ borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}>Download</button>
+                <button onClick={() => setViewingDoc(null)} className="text-sm px-4 py-2 rounded font-medium text-white" style={{ background: "var(--color-teal)" }}>Close</button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-8" style={{ background: "#FAFAFA" }}>
+              <div className="bg-white mx-auto shadow-sm border p-12 min-h-full max-w-2xl text-sm" style={{ borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}>
+                {viewingDoc.type === "XLSX" || viewingDoc.type === "CSV" ? (
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b bg-slate-50"><th className="p-2">Date</th><th className="p-2">Vibration_Level</th><th className="p-2">Status</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b"><td className="p-2">2026-09-15</td><td className="p-2">6.5</td><td className="p-2">Normal</td></tr>
+                      <tr className="border-b"><td className="p-2">2026-09-16</td><td className="p-2">8.2</td><td className="p-2 text-red-600 font-medium">Critical</td></tr>
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="space-y-4">
+                    <h1 className="text-2xl font-bold mb-6 text-center">{viewingDoc.name}</h1>
+                    <p className="font-semibold text-lg border-b pb-2">1. Executive Summary</p>
+                    <p>This is a mock representation of the {viewingDoc.type} document content. The document contains technical specifications and inspection metrics recorded on {viewingDoc.date}.</p>
+                    <p className="font-semibold text-lg border-b pb-2 mt-6">2. Classification Details</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Department: {viewingDoc.dept}</li>
+                      <li>Security Level: {viewingDoc.cls}</li>
+                      <li>Pages: {viewingDoc.pages || "N/A"}</li>
+                    </ul>
+                    <p className="mt-8 text-xs text-gray-400 text-center uppercase">-- End of Document --</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

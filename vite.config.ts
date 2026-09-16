@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 import fs from 'node:fs'
 
-const siteConfigPath = path.resolve(__dirname, './.figma/make/site.json')
+const siteConfigPath = path.resolve(import.meta.dirname, './.figma/make/site.json')
 const siteConfiguration = fs.existsSync(siteConfigPath)
   ? JSON.parse(fs.readFileSync(siteConfigPath, 'utf8'))
   : {}
@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(import.meta.dirname, './src'),
       },
     },
     server: {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNav } from "../context/NavContext";
 
 const files = [
@@ -70,16 +70,65 @@ export default function CodingWorkspace() {
   const [terminalTab, setTerminalTab] = useState("Terminal");
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState([
-    { role: "ai", text: "Coding Agent initialized. Repository context loaded. I can analyze code, generate tests, fix errors, and run the sandbox." },
-    { role: "user", text: "Analyze this repository and fix the failing tests." },
-    { role: "ai", text: "Analyzing repository structure...\n\n✓ 3 Python files, 2 test files\n⚠ 2 tests failing in test_analysis.py — threshold validation logic has an off-by-one error on line 34.\n\nFix applied. Running tests..." },
-    { role: "ai", text: "✓ All 12 tests now passing. Fix was a boundary condition in vibration threshold comparison (> should be >=). Verification checkpoint created." },
+    { role: "ai", text: "Coding Agent initialized. Repository context loaded. I can analyze code, generate tests, fix errors, and run the sandbox." }
   ]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [termLines, setTermLines] = useState<string[]>([]);
+  const [testStats, setTestStats] = useState("");
+  const [activeTabContent, setActiveTabContent] = useState(sampleCode);
+
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const runTests = () => {
+    if (isRunning) return;
+    setIsRunning(true);
+    setTerminalTab("Terminal");
+    setTermLines(["$ python -m pytest tests/ -v"]);
+    setTestStats("");
+    
+    let step = 0;
+    const testLines = [
+      "collected 12 items\n",
+      "tests/test_analysis.py::test_vibration_threshold PASSED    [ 8%]",
+      "tests/test_analysis.py::test_exceedance_calculation PASSED  [16%]",
+      "tests/test_analysis.py::test_edge_cases PASSED             [25%]",
+      "tests/test_utils.py::test_data_loading PASSED              [33%]",
+      "tests/test_utils.py::test_normalization PASSED             [41%]",
+      "tests/test_utils.py::test_export_formats PASSED            [50%]",
+      "...",
+      "============================== 12 passed in 1.34s =============================="
+    ];
+
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      if (step < testLines.length) {
+        setTermLines(prev => [...prev, testLines[step]]);
+        step++;
+      } else {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setIsRunning(false);
+        setTestStats("All 12 tests passed ✓\n\ntest_vibration_threshold PASSED\ntest_exceedance_calculation PASSED\ntest_edge_cases PASSED\n...");
+      }
+    }, 400);
+  };
 
   const send = () => {
-    if (!chatInput.trim()) return;
-    setMessages([...messages, { role: "user", text: chatInput }, { role: "ai", text: "Processing your request in the coding workspace..." }]);
+    if (!chatInput.trim() || isRunning) return;
+    setMessages([...messages, { role: "user", text: chatInput }]);
     setChatInput("");
+    setIsRunning(true);
+    
+    setTimeout(() => {
+      setMessages(prev => [...prev, { role: "ai", text: "Analyzing repository structure...\n\n✓ 3 Python files, 2 test files\n⚠ 2 tests failing in test_analysis.py — threshold validation logic has an off-by-one error on line 34.\n\nFix applied. Running tests..." }]);
+      setActiveTabContent(sampleCode.replace("> SOP_THRESHOLD", ">= SOP_THRESHOLD"));
+      runTests();
+    }, 1500);
   };
 
   return (
@@ -89,9 +138,9 @@ export default function CodingWorkspace() {
         <span className="text-sm font-semibold" style={{ color: "#F1F5F9" }}>Coding Workspace</span>
         <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: "#0F766E", color: "white", fontSize: 10 }}>CDU-4 Analysis Repo</span>
         <div className="flex items-center gap-2 ml-auto">
-          <button onClick={() => navigate("sandbox")} className="text-xs px-3 py-1.5 rounded font-medium" style={{ background: "#1E3A5F", color: "#93C5FD", fontSize: 11 }}>Open Sandbox</button>
-          <button className="text-xs px-3 py-1.5 rounded font-medium" style={{ background: "#064E3B", color: "#6EE7B7", fontSize: 11 }}>▶ Run</button>
-          <button className="text-xs px-3 py-1.5 rounded font-medium" style={{ background: "#312E81", color: "#A5B4FC", fontSize: 11 }}>Create Checkpoint</button>
+          <button onClick={() => navigate("sandbox")} className="text-xs px-3 py-1.5 rounded font-medium transition-colors hover:bg-slate-700" style={{ background: "#1E3A5F", color: "#93C5FD", fontSize: 11 }}>Open Sandbox</button>
+          <button onClick={runTests} disabled={isRunning} className="text-xs px-3 py-1.5 rounded font-medium transition-colors hover:bg-emerald-800 disabled:opacity-50" style={{ background: "#064E3B", color: "#6EE7B7", fontSize: 11 }}>{isRunning ? "Running..." : "▶ Run"}</button>
+          <button className="text-xs px-3 py-1.5 rounded font-medium transition-colors hover:bg-indigo-800" style={{ background: "#312E81", color: "#A5B4FC", fontSize: 11 }}>Create Checkpoint</button>
         </div>
       </div>
 
@@ -160,7 +209,7 @@ export default function CodingWorkspace() {
           {/* Code */}
           <div className="flex-1 overflow-auto p-4">
             <pre className="text-xs leading-6" style={{ color: "#E2E8F0", fontFamily: "var(--font-mono)", fontSize: 12 }}>
-              <code>{sampleCode}</code>
+              <code>{activeFile === "main.py" ? activeTabContent : "# Other file content..."}</code>
             </pre>
           </div>
 
@@ -178,10 +227,24 @@ export default function CodingWorkspace() {
                 </button>
               ))}
             </div>
-            <div className="p-3 overflow-y-auto h-full">
-              <pre className="text-xs" style={{ color: terminalTab === "Terminal" ? "#22D3EE" : "#86EFAC", fontFamily: "var(--font-mono)", fontSize: 11, lineHeight: 1.6 }}>
-                {terminalTab === "Terminal" ? terminalOutput : "All 12 tests passed ✓\n\ntest_vibration_threshold PASSED\ntest_exceedance_calculation PASSED\ntest_edge_cases PASSED\n..."}
-              </pre>
+            <div className="p-3 overflow-y-auto h-full flex flex-col gap-1">
+              {terminalTab === "Terminal" ? (
+                termLines.length === 0 ? (
+                  <div style={{ color: "#64748B", fontFamily: "var(--font-mono)", fontSize: 11 }}>Ready. Press Run to execute tests.</div>
+                ) : (
+                  termLines.map((line, i) => (
+                    <div key={i} style={{ color: line.includes("PASSED") ? "#86EFAC" : line.includes("error") ? "#F87171" : "#22D3EE", fontFamily: "var(--font-mono)", fontSize: 11 }}>{line}</div>
+                  ))
+                )
+              ) : (
+                <pre className="text-xs" style={{ color: "#86EFAC", fontFamily: "var(--font-mono)", fontSize: 11, lineHeight: 1.6 }}>{testStats}</pre>
+              )}
+              {isRunning && (
+                <div className="flex items-center mt-1">
+                  <span className="text-xs" style={{ color: "#22D3EE", fontFamily: "var(--font-mono)" }}>_</span>
+                  <span className="w-1.5 h-3 ml-0.5 animate-pulse" style={{ background: "#22D3EE" }} />
+                </div>
+              )}
             </div>
           </div>
         </div>

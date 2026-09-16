@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const capabilities = ["Engineering Calculations", "Equipment Analysis", "Inspection Analysis", "Trend Analysis", "Anomaly Detection", "Risk Assessment", "Historical Comparison", "Technical Report Generation"];
 
@@ -15,8 +15,38 @@ const analysisResult = {
 };
 
 export default function EngineeringAnalysis() {
-  const [activeStep, setActiveStep] = useState(3);
+  const [activeStep, setActiveStep] = useState<number | null>(null);
   const [inputType, setInputType] = useState("Text");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const runAnalysis = () => {
+    if (isAnalyzing) return;
+    setIsAnalyzing(true);
+    setShowResult(false);
+    setActiveStep(0);
+    
+    let step = 0;
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      if (step < pipeline.length - 1) {
+        step++;
+        setActiveStep(step);
+      } else {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setIsAnalyzing(false);
+        setShowResult(true);
+        setActiveStep(null);
+      }
+    }, 1000);
+  };
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: "var(--color-bg-secondary)" }}>
@@ -64,8 +94,10 @@ export default function EngineeringAnalysis() {
                 style={{ borderColor: "var(--color-border)", color: "var(--color-text-primary)", fontSize: 13 }}
               />
               <div className="flex gap-2 mt-3">
-                <button className="text-xs px-3 py-1.5 rounded border font-medium hover:bg-slate-50" style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}>Attach Files</button>
-                <button className="flex-1 text-xs py-1.5 rounded font-medium text-white" style={{ background: "var(--color-teal)" }}>Run Analysis</button>
+                <button className="text-xs px-3 py-1.5 rounded border font-medium hover:bg-slate-50 transition-colors" style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}>Attach Files</button>
+                <button onClick={runAnalysis} disabled={isAnalyzing} className="flex-1 text-xs py-1.5 rounded font-medium text-white transition-colors hover:bg-teal-700 disabled:opacity-50" style={{ background: "var(--color-teal)" }}>
+                  {isAnalyzing ? "Analyzing..." : "Run Analysis"}
+                </button>
               </div>
             </div>
 
@@ -78,15 +110,15 @@ export default function EngineeringAnalysis() {
                     <div
                       className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
                       style={{
-                        background: i < activeStep ? "var(--color-teal)" : i === activeStep ? "#EFF6FF" : "var(--color-border)",
-                        color: i < activeStep ? "white" : i === activeStep ? "var(--color-blue)" : "var(--color-text-muted)",
+                        background: activeStep !== null && i < activeStep ? "var(--color-teal)" : i === activeStep ? "#EFF6FF" : "var(--color-border)",
+                        color: activeStep !== null && i < activeStep ? "white" : i === activeStep ? "var(--color-blue)" : "var(--color-text-muted)",
                         border: i === activeStep ? "1.5px solid var(--color-blue)" : "none",
                         fontSize: 10,
                       }}
                     >
-                      {i < activeStep ? "✓" : i + 1}
+                      {activeStep !== null && i < activeStep ? "✓" : i + 1}
                     </div>
-                    <span className="text-xs font-medium" style={{ color: i < activeStep ? "var(--color-teal)" : i === activeStep ? "var(--color-blue)" : "var(--color-text-muted)" }}>
+                    <span className="text-xs font-medium" style={{ color: activeStep !== null && i < activeStep ? "var(--color-teal)" : i === activeStep ? "var(--color-blue)" : "var(--color-text-muted)" }}>
                       {step}
                     </span>
                     {i === activeStep && (
@@ -100,58 +132,68 @@ export default function EngineeringAnalysis() {
 
           {/* Right — Results */}
           <div className="col-span-3 space-y-4">
-            <div className="bg-white rounded border p-5" style={{ borderColor: "var(--color-border)" }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-semibold text-sm" style={{ color: "var(--color-text-primary)" }}>{analysisResult.title}</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: "#FEE2E2", color: "#991B1B", fontSize: 10 }}>Risk: HIGH</span>
-                  <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: "#DBEAFE", color: "#1D4ED8", fontSize: 10 }}>Engineering Agent</span>
-                </div>
+            {!showResult ? (
+              <div className="bg-white rounded border p-12 text-center flex flex-col items-center justify-center h-full" style={{ borderColor: "var(--color-border)" }}>
+                {isAnalyzing ? (
+                  <div className="text-sm font-medium animate-pulse" style={{ color: "var(--color-text-muted)" }}>Analyzing data...</div>
+                ) : (
+                  <div className="text-sm font-medium" style={{ color: "var(--color-text-muted)" }}>Ready to analyze. Provide input and click "Run Analysis".</div>
+                )}
               </div>
-              <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>{analysisResult.summary}</p>
-
-              <div className="space-y-3">
-                {analysisResult.findings.map((f, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3 rounded border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-subtle)" }}>
-                    <div className="flex-1">
-                      <div className="text-xs font-medium" style={{ color: "var(--color-text-secondary)" }}>{f.label}</div>
-                      <div className="text-sm font-semibold mt-0.5" style={{ color: "var(--color-text-primary)" }}>{f.value}</div>
-                      <div className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>Threshold: {f.threshold}</div>
-                    </div>
-                    <span className="text-xs px-2 py-0.5 rounded font-medium flex-shrink-0" style={{
-                      background: f.status === "Exceeded" || f.status === "Critical" ? "#FEE2E2" : "#FEF3C7",
-                      color: f.status === "Exceeded" || f.status === "Critical" ? "#991B1B" : "#92400E",
-                      fontSize: 10,
-                    }}>
-                      {f.status}
-                    </span>
+            ) : (
+              <div className="bg-white rounded border p-5" style={{ borderColor: "var(--color-border)" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-semibold text-sm" style={{ color: "var(--color-text-primary)" }}>{analysisResult.title}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: "#FEE2E2", color: "#991B1B", fontSize: 10 }}>Risk: HIGH</span>
+                    <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: "#DBEAFE", color: "#1D4ED8", fontSize: 10 }}>Engineering Agent</span>
                   </div>
-                ))}
-              </div>
-
-              {/* Verification */}
-              <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--color-border)" }}>
-                <div className="text-xs font-semibold mb-2" style={{ color: "var(--color-text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>Verification</div>
-                <div className="flex gap-4">
-                  {["Evidence Found", "Calculation Verified", "SOP Referenced", "Permissions Valid"].map((v) => (
-                    <div key={v} className="flex items-center gap-1 text-xs" style={{ color: "var(--color-success)" }}>
-                      <span>✓</span> <span>{v}</span>
+                </div>
+                <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>{analysisResult.summary}</p>
+  
+                <div className="space-y-3">
+                  {analysisResult.findings.map((f, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3 rounded border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-subtle)" }}>
+                      <div className="flex-1">
+                        <div className="text-xs font-medium" style={{ color: "var(--color-text-secondary)" }}>{f.label}</div>
+                        <div className="text-sm font-semibold mt-0.5" style={{ color: "var(--color-text-primary)" }}>{f.value}</div>
+                        <div className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>Threshold: {f.threshold}</div>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded font-medium flex-shrink-0" style={{
+                        background: f.status === "Exceeded" || f.status === "Critical" ? "#FEE2E2" : "#FEF3C7",
+                        color: f.status === "Exceeded" || f.status === "Critical" ? "#991B1B" : "#92400E",
+                        fontSize: 10,
+                      }}>
+                        {f.status}
+                      </span>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t flex gap-2" style={{ borderColor: "var(--color-border)" }}>
-                <div className="text-xs px-3 py-2 rounded flex-1 text-center font-medium" style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FDE68A" }}>
-                  ⚠ Engineering Review Required — AI analysis is not a certified engineering assessment
+  
+                {/* Verification */}
+                <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs font-semibold mb-2" style={{ color: "var(--color-text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>Verification</div>
+                  <div className="flex gap-4">
+                    {["Evidence Found", "Calculation Verified", "SOP Referenced", "Permissions Valid"].map((v) => (
+                      <div key={v} className="flex items-center gap-1 text-xs" style={{ color: "var(--color-success)" }}>
+                        <span>✓</span> <span>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+  
+                <div className="mt-4 pt-4 border-t flex gap-2" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs px-3 py-2 rounded flex-1 text-center font-medium" style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FDE68A" }}>
+                    ⚠ Engineering Review Required — AI analysis is not a certified engineering assessment
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button className="flex-1 text-xs py-2 rounded border font-medium hover:bg-slate-50 transition-colors" style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}>View Evidence</button>
+                  <button className="flex-1 text-xs py-2 rounded font-medium text-white transition-colors hover:bg-teal-700" style={{ background: "var(--color-teal)" }}>Generate Report</button>
+                  <button className="flex-1 text-xs py-2 rounded border font-medium hover:bg-slate-50 transition-colors" style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}>Request Approval</button>
                 </div>
               </div>
-              <div className="flex gap-2 mt-3">
-                <button className="flex-1 text-xs py-2 rounded border font-medium" style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}>View Evidence</button>
-                <button className="flex-1 text-xs py-2 rounded font-medium text-white" style={{ background: "var(--color-teal)" }}>Generate Report</button>
-                <button className="flex-1 text-xs py-2 rounded border font-medium" style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}>Request Approval</button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

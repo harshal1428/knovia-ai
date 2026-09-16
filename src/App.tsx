@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavContext, Page } from "./context/NavContext";
+import { NavContext, Page, Project } from "./context/NavContext";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 
@@ -72,9 +72,23 @@ function PageContent({ page }: { page: Page }) {
   }
 }
 
+const initialProjects: Project[] = [
+  { name: "CDU-4 Inspection Analysis", owner: "Anita Rao", dept: "Process Engineering", status: "Active", progress: 72, tasks: 14, artifacts: 3, cls: "CONFIDENTIAL", agents: ["Engineering Agent", "HSE Agent"], updated: "16 Sep 2026", contributors: ["Anita Rao", "Rajesh Kumar"] },
+  { name: "P-102 Pump Maintenance Study", owner: "Rajesh Kumar", dept: "Inspection Engineering", status: "Active", progress: 45, tasks: 9, artifacts: 1, cls: "CONFIDENTIAL", agents: ["HSE/Inspection Agent"], updated: "15 Sep 2026", contributors: ["Rajesh Kumar"] },
+  { name: "Vendor Technical Evaluation — CX-4", owner: "Priya Nair", dept: "Procurement", status: "Completed", progress: 100, tasks: 12, artifacts: 5, cls: "INTERNAL", agents: ["Research Agent", "Document Agent"], updated: "14 Sep 2026", contributors: ["Priya Nair", "Suresh Bhat"] },
+  { name: "Reformer Unit Optimization", owner: "Suresh Bhat", dept: "Process Engineering", status: "Active", progress: 33, tasks: 6, artifacts: 0, cls: "CONFIDENTIAL", agents: ["Data Analysis Agent", "Engineering Agent"], updated: "16 Sep 2026", contributors: ["Suresh Bhat"] },
+  { name: "Pipeline Anomaly Investigation", owner: "Meena Shetty", dept: "HSE", status: "Pending Approval", progress: 88, tasks: 11, artifacts: 2, cls: "RESTRICTED", agents: ["HSE Agent", "Document Agent"], updated: "12 Sep 2026", contributors: ["Meena Shetty"] },
+  { name: "Annual Turnaround Planning 2027", owner: "Arvind Rao", dept: "Maintenance", status: "Planning", progress: 12, tasks: 3, artifacts: 0, cls: "INTERNAL", agents: [], updated: "10 Sep 2026", contributors: ["Arvind Rao"] },
+];
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
+
+  const updateProject = (name: string, updates: Partial<Project>) => {
+    setProjects(prev => prev.map(p => p.name === name ? { ...p, ...updates } : p));
+  };
 
   // Full-width pages that manage their own layout
   const fullHeightPages: Page[] = [
@@ -84,7 +98,7 @@ export default function App() {
   const isFullHeight = fullHeightPages.includes(currentPage);
 
   return (
-    <NavContext.Provider value={{ currentPage, navigate: setCurrentPage }}>
+    <NavContext.Provider value={{ currentPage, navigate: setCurrentPage, projects, updateProject }}>
       <div className="flex h-screen overflow-hidden" style={{ background: "var(--color-bg)" }}>
         {/* Sidebar */}
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((v) => !v)} />
