@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNav } from "../context/NavContext";
 
 const capabilities = ["Engineering Calculations", "Equipment Analysis", "Inspection Analysis", "Trend Analysis", "Anomaly Detection", "Risk Assessment", "Historical Comparison", "Technical Report Generation"];
 
@@ -15,6 +16,7 @@ const analysisResult = {
 };
 
 export default function EngineeringAnalysis() {
+  const { navigate } = useNav();
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [inputType, setInputType] = useState("Text");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -51,9 +53,19 @@ export default function EngineeringAnalysis() {
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: "var(--color-bg-secondary)" }}>
       <div className="max-w-5xl mx-auto px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold" style={{ color: "var(--color-text-primary)" }}>Engineering Analysis</h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>AI-assisted engineering analysis — all outputs require engineer review</p>
+        <div className="flex items-center gap-4 mb-6">
+          <button 
+            onClick={() => navigate("workbench")}
+            className="w-9 h-9 rounded-lg bg-white border hover:bg-slate-50 text-slate-600 flex items-center justify-center transition-colors shadow-sm flex-shrink-0"
+            style={{ borderColor: "var(--color-border)" }}
+            title="Back to Workbench"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: "var(--color-text-primary)" }}>Engineering Analysis</h1>
+            <p className="text-sm mt-0.5" style={{ color: "var(--color-text-muted)" }}>AI-assisted engineering analysis — all outputs require engineer review</p>
+          </div>
         </div>
 
         {/* Capabilities */}

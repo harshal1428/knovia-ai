@@ -5,6 +5,7 @@ import Header from "./components/Header";
 
 import Dashboard from "./pages/Dashboard";
 import Workbench from "./pages/Workbench";
+import Login from "./pages/Login";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Tasks from "./pages/Tasks";
@@ -19,7 +20,6 @@ import ModelRouter from "./pages/ModelRouter";
 import Models from "./pages/Models";
 import ToolRegistry from "./pages/ToolRegistry";
 import OfflinePlugins from "./pages/OfflinePlugins";
-import CodingWorkspace from "./pages/CodingWorkspace";
 import Sandbox from "./pages/Sandbox";
 import EngineeringAnalysis from "./pages/EngineeringAnalysis";
 import EngineeringDrawings from "./pages/EngineeringDrawings";
@@ -53,7 +53,6 @@ function PageContent({ page }: { page: Page }) {
     case "models": return <Models />;
     case "tool-registry": return <ToolRegistry />;
     case "offline-plugins": return <OfflinePlugins />;
-    case "coding-workspace": return <CodingWorkspace />;
     case "sandbox": return <Sandbox />;
     case "engineering-analysis": return <EngineeringAnalysis />;
     case "engineering-drawings": return <EngineeringDrawings />;
@@ -82,9 +81,11 @@ const initialProjects: Project[] = [
 ];
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [pendingSandboxTask, setPendingSandboxTask] = useState<string | null>(null);
 
   const updateProject = (name: string, updates: Partial<Project>) => {
     setProjects(prev => prev.map(p => p.name === name ? { ...p, ...updates } : p));
@@ -92,16 +93,26 @@ export default function App() {
 
   // Full-width pages that manage their own layout
   const fullHeightPages: Page[] = [
-    "workbench", "coding-workspace", "personal-chat", "research-notebooks",
+    "workbench", "sandbox", "personal-chat", "research-notebooks",
     "notes", "project-detail",
   ];
   const isFullHeight = fullHeightPages.includes(currentPage);
 
+  if (!isAuthenticated) {
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  }
+
   return (
-    <NavContext.Provider value={{ currentPage, navigate: setCurrentPage, projects, updateProject }}>
+    <NavContext.Provider value={{ currentPage, navigate: setCurrentPage, projects, updateProject, pendingSandboxTask, setPendingSandboxTask }}>
       <div className="flex h-screen overflow-hidden" style={{ background: "var(--color-bg)" }}>
         {/* Sidebar */}
-        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((v) => !v)} />
+        <div 
+          onMouseEnter={() => setSidebarCollapsed(false)}
+          onMouseLeave={() => setSidebarCollapsed(true)}
+          className="h-full z-20 flex-shrink-0"
+        >
+          <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((v) => !v)} />
+        </div>
 
         {/* Main */}
         <div className="flex flex-col flex-1 overflow-hidden">

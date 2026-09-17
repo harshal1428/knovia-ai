@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNav } from "../context/NavContext";
 
 type ExecutionMode = "auto" | "manual";
@@ -14,10 +14,13 @@ type Message = {
     model?: string;
     sources?: number;
     verified?: boolean;
+    generationSteps?: GenerationStep[];
   };
   artifact?: {
     name: string;
     status: "pending_approval" | "approved";
+    type?: "doc" | "code" | "drawing";
+    content?: string;
   };
 };
 
@@ -29,7 +32,7 @@ type GenerationState = {
   progress: number;
   startTime: number;
   duration: number;
-  questionType: "simple" | "medium" | "complex";
+  questionType: "simple" | "medium" | "complex" | "coding" | "engineering";
   artifactGen?: boolean;
 };
 
@@ -64,10 +67,12 @@ const pathLabels: Record<string, string> = {
   fast: "⚡ Fast Path · Direct Data Retrieval",
   knowledge: "🔍 Knowledge Path · Hybrid RAG",
   complex: "⚙ Complex Path · Multi-Agent",
+  coding: "⌨ Coding Path · Sandbox Environment",
+  engineering: "📐 Engineering Path · Analysis & CAD",
 };
 
 export default function Workbench() {
-  const { navigate, projects } = useNav();
+  const { navigate, projects, setPendingSandboxTask } = useNav();
   const [messages, setMessages] = useState<Message[]>(demoMessages);
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<ExecutionMode>("auto");
@@ -77,10 +82,39 @@ export default function Workbench() {
   const [rightCollapsed, setRightCollapsed] = useState(true);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [currentProjectName, setCurrentProjectName] = useState(projects[0]?.name || "CDU-4 Inspection Analysis");
+  const [viewingDrawing, setViewingDrawing] = useState(false);
+  
+  // State for Chats
+  const [recentChats, setRecentChats] = useState([
+    { id: 1, title: "Current status of Project Alpha", type: "Project" },
+    { id: 2, title: "Compare latest P-102 report", type: "Project" },
+    { id: 3, title: "Personal Notes - Q3", type: "Personal" }
+  ]);
+  const [showNewChatMenu, setShowNewChatMenu] = useState(false);
   
   const currentProject = projects.find(p => p.name === currentProjectName) || projects[0];
 
   const [generation, setGeneration] = useState<GenerationState | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, generation]);
+
+  const handleNewChat = (type: "Project" | "Personal") => {
+    const newChat = {
+      id: Date.now(),
+      title: "New " + type + " Chat",
+      type: type
+    };
+    setRecentChats([newChat, ...recentChats]);
+    setMessages([]);
+    setShowNewChatMenu(false);
+  };
 
   const handleSend = () => {
     if (!input.trim() || generation?.active) return;
@@ -89,22 +123,45 @@ export default function Workbench() {
     setInput("");
 
     const lowerInput = input.toLowerCase();
-    let qType: "simple" | "medium" | "complex" = "simple";
+    let qType: "simple" | "medium" | "complex" | "coding" | "engineering" = "simple";
     let duration = 3; // 3 sec default
     let hasArtifact = false;
 
-    if (lowerInput.includes("plan") || lowerInput.includes("complex") || lowerInput.includes("turnaround")) {
+    if (lowerInput.includes("code") || lowerInput.includes("sandbox") || lowerInput.includes("testcase") || lowerInput.includes("coding")) {
+      qType = "coding";
+      duration = 15;
+      hasArtifact = true;
+    } else if (lowerInput.includes("drawing") || lowerInput.includes("engineering") || lowerInput.includes("design")) {
+      qType = "engineering";
+      duration = 15;
+      hasArtifact = true;
+    } else if (lowerInput.includes("plan") || lowerInput.includes("complex") || lowerInput.includes("turnaround")) {
       qType = "complex";
-      duration = 120; // 2 mins
+      duration = 15; // Speeding up simulation for UX
       hasArtifact = true;
     } else if (lowerInput.includes("analyze") || lowerInput.includes("report") || lowerInput.includes("compare")) {
       qType = "medium";
-      duration = 30; // 30 sec
+      duration = 8;
       hasArtifact = true;
     }
 
     let steps: GenerationStep[] = [];
-    if (qType === "complex") {
+    if (qType === "coding") {
+      steps = [
+        { label: "Opening Sandbox Environment", status: "active" },
+        { label: "Writing implementation code", status: "pending" },
+        { label: "Generating unit test cases", status: "pending" },
+        { label: "Running tests & verifying execution", status: "pending" },
+        { label: "Finalizing sandbox output", status: "pending" }
+      ];
+    } else if (qType === "engineering") {
+      steps = [
+        { label: "Loading engineering constraints & requirements", status: "active" },
+        { label: "Running finite element & structural analysis", status: "pending" },
+        { label: "Generating 3D blueprint / drawing", status: "pending" },
+        { label: "Validating safety factors against standards", status: "pending" }
+      ];
+    } else if (qType === "complex") {
       steps = [
         { label: "Analyzing multi-agent requirements", status: "active" },
         { label: "Delegating tasks to Research & Engineering agents", status: "pending" },
@@ -167,19 +224,93 @@ export default function Workbench() {
 
       if (elapsed >= generation.duration) {
         clearInterval(interval);
-        const path = generation.questionType === "complex" ? "complex" : generation.questionType === "medium" ? "knowledge" : "fast";
-        const content = generation.questionType === "complex" 
-          ? "I have generated the comprehensive turnaround plan and associated artifacts. Please review the attached execution DAG and resource allocation blueprint."
-          : generation.questionType === "medium"
-          ? "Analysis complete. I've cross-referenced the reports and generated a summary document highlighting the key discrepancies."
-          : "Hello! I am Sovereign AI, ready to assist you with MRPL operations. How can I help you today?";
+        let path: ExecutionPath = "fast";
+        let content = "Hello! I am Sovereign AI, ready to assist you. How can I help you today?";
+        let artifactDetails: any = undefined;
+
+        if (generation.questionType === "complex") {
+          path = "complex";
+          content = "I have generated the comprehensive turnaround plan and associated artifacts. Please review the attached execution DAG and resource allocation blueprint.";
+          artifactDetails = { name: "Turnaround_Plan_v1.pdf", status: "pending_approval", type: "doc" };
+        } else if (generation.questionType === "medium") {
+          path = "knowledge";
+          content = "Analysis complete. I've cross-referenced the reports and generated a summary document highlighting the key discrepancies.";
+          artifactDetails = { name: "Analysis_Report.csv", status: "pending_approval", type: "doc" };
+        } else if (generation.questionType === "coding") {
+          path = "complex"; 
+          content = "I have analyzed the requirements and designed the implementation logic.";
+          artifactDetails = { 
+            name: "sandbox_script.py", 
+            status: "pending_approval", 
+            type: "code",
+            content: `import numpy as np
+import pandas as pd
+from typing import List, Dict
+
+class PumpEfficiencyAnalyzer:
+    def __init__(self, threshold: float = 7.1):
+        self.threshold = threshold
+        self.data_cache = []
+
+    def process_telemetry(self, raw_data: List[Dict]) -> pd.DataFrame:
+        df = pd.DataFrame(raw_data)
+        if df.empty:
+            raise ValueError("No data provided")
+        df['efficiency_score'] = df['flow_rate'] / (df['power_kw'] + 1e-5)
+        self.data_cache.append(df)
+        return df
+
+    def check_anomalies(self, df: pd.DataFrame) -> List[str]:
+        anomalies = []
+        for idx, row in df.iterrows():
+            if row['vibration_mms'] > self.threshold:
+                anomalies.append(f"High vibration at index {idx}: {row['vibration_mms']}")
+        return anomalies
+
+def run_test_cases():
+    analyzer = PumpEfficiencyAnalyzer()
+    test_data = [
+        {'flow_rate': 120, 'power_kw': 15, 'vibration_mms': 6.2},
+        {'flow_rate': 115, 'power_kw': 16, 'vibration_mms': 8.5},
+        {'flow_rate': 110, 'power_kw': 14, 'vibration_mms': 4.1}
+    ]
+    
+    df = analyzer.process_telemetry(test_data)
+    warnings = analyzer.check_anomalies(df)
+    
+    print(f"Processed {len(df)} records.")
+    print(f"Detected {len(warnings)} anomalies.")
+    for w in warnings:
+        print(f" - {w}")
+    return True
+
+if __name__ == '__main__':
+    run_test_cases()`
+          };
+        } else if (generation.questionType === "engineering") {
+          path = "complex";
+          content = "Engineering analysis is complete. I have evaluated the stress constraints and generated the requested CAD blueprint/drawing. Safety factors are within standards.";
+          artifactDetails = { 
+            name: "P102_Bearing_Design.cad", 
+            status: "pending_approval", 
+            type: "drawing" 
+          };
+        }
         
         const aiMsg: Message = {
           id: Date.now(),
           role: "assistant",
           content,
-          meta: { path, agent: mode === "manual" ? selectedAgent : "Auto Selected", model: "Sovereign-1 (Local)", verified: true },
-          artifact: generation.artifactGen ? { name: generation.questionType === "complex" ? "Turnaround_Plan_v1.pdf" : "Analysis_Report.csv", status: "pending_approval" } : undefined
+          meta: { 
+            path: path as ExecutionPath, 
+            agent: mode === "manual" ? selectedAgent : 
+                   generation.questionType === "coding" ? "Coding Agent" : 
+                   generation.questionType === "engineering" ? "Engineering Agent" : "Auto Selected", 
+            model: "Sovereign-1 (Local)", 
+            verified: true,
+            generationSteps: [...newSteps]
+          },
+          artifact: generation.artifactGen ? artifactDetails : undefined
         };
         
         setMessages((prev) => [...prev, aiMsg]);
@@ -282,34 +413,42 @@ export default function Workbench() {
               </button>
             </div>
             
-            <div className="p-4 border-b border-slate-100">
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm" title="Start a fresh chat">
+            <div className="p-4 border-b border-slate-100 relative">
+              <button 
+                onClick={() => setShowNewChatMenu(!showNewChatMenu)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm" title="Start a fresh chat">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
                 New Chat
               </button>
+              
+              {showNewChatMenu && (
+                <div className="absolute top-14 left-4 right-4 bg-white border border-slate-200 shadow-xl rounded-xl p-1 z-20 animate-in fade-in zoom-in-95">
+                  <button 
+                    onClick={() => handleNewChat("Project")}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-teal-50 hover:text-teal-700 font-medium transition-colors"
+                  >
+                    📝 Project Chat
+                  </button>
+                  <button 
+                    onClick={() => handleNewChat("Personal")}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-teal-50 hover:text-teal-700 font-medium transition-colors"
+                  >
+                    🔒 Personal Chat
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-              <div className="text-xs font-bold text-slate-400 tracking-wider uppercase px-2 mb-2 mt-1">Recent</div>
-              {[
-                "Current status of Project Alpha",
-                "Compare latest P-102 report",
-                "Generate management approval",
-                "Review HSE guidelines",
-              ].map((chat, i) => (
-                <button key={i} className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors truncate ${i === 0 ? "bg-slate-100 text-slate-900 font-medium" : "text-slate-600 hover:bg-slate-50"}`} title={`Load chat: ${chat}`}>
-                  {chat}
-                </button>
-              ))}
-              
-              <div className="text-xs font-bold text-slate-400 tracking-wider uppercase px-2 mb-2 mt-6">Last Week</div>
-              {[
-                "Draft initial requirements",
-                "Budget calculation query",
-                "Vendor list 2026",
-              ].map((chat, i) => (
-                <button key={i} className="w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors text-slate-600 hover:bg-slate-50 truncate" title={`Load chat: ${chat}`}>
-                  {chat}
+              <div className="text-xs font-bold text-slate-400 tracking-wider uppercase px-2 mb-2 mt-1">Recent Chats</div>
+              {recentChats.map((chat, i) => (
+                <button key={chat.id} className={`w-full flex flex-col items-start px-3 py-2 rounded-lg transition-colors truncate ${i === 0 ? "bg-slate-100" : "hover:bg-slate-50"}`} title={`Load chat: ${chat.title}`}>
+                  <span className={`text-sm truncate w-full text-left ${i === 0 ? "text-slate-900 font-medium" : "text-slate-600"}`}>
+                    {chat.title}
+                  </span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded mt-1 font-bold ${chat.type === "Project" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                    {chat.type}
+                  </span>
                 </button>
               ))}
             </div>
@@ -329,7 +468,8 @@ export default function Workbench() {
           {/* (Router removed as requested, now integrated in main header) */}
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-8 py-8 space-y-8">
+          <div className="flex-1 overflow-y-auto px-8 py-8 space-y-8 flex flex-col">
+            
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-3xl ${msg.role === "user" ? "order-2" : ""}`}>
@@ -360,26 +500,68 @@ export default function Workbench() {
                     {msg.content}
                   </div>
                   {msg.artifact && (
-                    <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center text-teal-600 shadow-sm border border-teal-200">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-slate-800">{msg.artifact.name}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">
-                            {msg.artifact.status === "pending_approval" ? "Awaiting your approval to save..." : "Approved & Saved to Documents"}
+                    <div className="mt-4 p-4 bg-white border border-slate-200 rounded-xl flex flex-col shadow-sm">
+                      {/* Top Row: Icon, Info, and Action Button */}
+                      <div className="flex items-start justify-between w-full">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600 shadow-sm border border-teal-100 shrink-0">
+                            {msg.artifact.type === "code" ? (
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                            ) : msg.artifact.type === "drawing" ? (
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                            ) : (
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-slate-800">{msg.artifact.name}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              {msg.artifact.status === "pending_approval" ? "Awaiting your approval to save..." : "Approved & Saved"}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      {msg.artifact.status === "pending_approval" ? (
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => approveArtifact(msg.id)} className="text-xs px-3 py-1.5 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors shadow-sm">Approve</button>
-                          <button className="text-xs px-3 py-1.5 bg-white border border-slate-200 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">Reject</button>
+
+                        {/* Action Button (View in Sandbox, View Document, etc.) */}
+                        <div className="flex items-center">
+                          {msg.artifact.type === "code" && (
+                            <button 
+                              onClick={() => {
+                                if (msg.artifact!.content) setPendingSandboxTask(msg.artifact!.content);
+                                navigate("sandbox");
+                              }} 
+                              className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors shadow-sm"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                              View in Sandbox
+                            </button>
+                          )}
+                          {msg.artifact.type === "drawing" && (
+                            <button onClick={() => setViewingDrawing(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors shadow-sm">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                              View Drawing
+                            </button>
+                          )}
+                          {msg.artifact.type === "doc" && (
+                            <button className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors shadow-sm">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                              Open Document
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-md border border-green-200 uppercase tracking-wider shadow-sm">✓ Approved</span>
-                      )}
+                      </div>
+
+                      {/* Approvals Row */}
+                      <div className="mt-4 flex items-center justify-between w-full border-t border-slate-100 pt-3">
+                        <span className="text-xs text-slate-400 font-medium tracking-wide uppercase">AI Action Required</span>
+                        {msg.artifact.status === "pending_approval" ? (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => approveArtifact(msg.id)} className="text-xs px-5 py-1.5 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700 transition-colors shadow-sm">Approve</button>
+                            <button className="text-xs px-5 py-1.5 bg-white border border-slate-200 text-slate-600 font-semibold rounded-md hover:bg-slate-50 transition-colors shadow-sm">Reject</button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded border border-green-200 uppercase tracking-wider shadow-sm">✓ Approved</span>
+                        )}
+                      </div>
                     </div>
                   )}
                   {msg.meta?.path && (
@@ -407,13 +589,40 @@ export default function Workbench() {
                       )}
                     </div>
                   )}
+
+                  {/* Persistent Generation Steps */}
+                  {msg.meta?.generationSteps && (
+                    <details className="mt-4 rounded-2xl bg-slate-50 border border-slate-100 shadow-inner w-full group overflow-hidden">
+                      <summary className="text-xs font-bold text-slate-500 uppercase tracking-wider p-4 cursor-pointer hover:bg-slate-100 transition-colors list-none flex items-center justify-between outline-none">
+                        <span className="flex items-center gap-2">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-teal-600"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                          Execution Log
+                        </span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-open:rotate-180 transition-transform duration-200">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </summary>
+                      <div className="flex flex-col gap-2 px-4 pb-4 border-t border-slate-100 pt-3">
+                        {msg.meta.generationSteps.map((step, idx) => (
+                          <div key={idx} className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <span className="text-[12px] text-slate-500 font-medium line-through decoration-slate-300">
+                              {step.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
               </div>
             ))}
-            
+
             {/* Generation Indicator */}
             {generation?.active && (
-              <div className="flex justify-start">
+              <div className="flex justify-start mb-8">
                 <div className="max-w-3xl flex flex-col items-start gap-2">
                   <div className="flex items-center gap-2.5 ml-1">
                     <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold bg-teal-600 text-white shadow-sm animate-pulse">
@@ -447,7 +656,29 @@ export default function Workbench() {
                 </div>
               </div>
             )}
+            
+            <div ref={messagesEndRef} />
           </div>
+
+          {/* Drawing Modal */}
+          {viewingDrawing && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center p-8 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">P102_Bearing_Design.cad</h2>
+                    <div className="text-xs text-slate-500 mt-0.5">Engineering Drawing · P-102 Feed Transfer Pump</div>
+                  </div>
+                  <button onClick={() => setViewingDrawing(false)} className="text-sm px-4 py-2 rounded-lg font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">
+                    Close
+                  </button>
+                </div>
+                <div className="flex-1 overflow-auto bg-slate-100 p-6 flex justify-center items-center">
+                  <img src="/engineering_drawing.png" alt="Engineering Drawing" className="max-w-full max-h-[70vh] rounded shadow-md object-contain bg-white border border-slate-200" />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Input */}
           <div className="flex-shrink-0 px-6 pb-6 pt-2 bg-transparent">

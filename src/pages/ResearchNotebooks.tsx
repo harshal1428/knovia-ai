@@ -18,8 +18,27 @@ export default function ResearchNotebooks() {
   const [activeTab, setActiveTab] = useState("Chat");
   const [input, setInput] = useState("");
   const [sourceGrounded, setSourceGrounded] = useState(true);
+  const [messages, setMessages] = useState(chatMessages);
+  const [isTyping, setIsTyping] = useState(false);
 
   const nb = activeNotebook !== null ? notebooks[activeNotebook] : null;
+
+  const handleAsk = () => {
+    if (!input.trim() || isTyping) return;
+    const userMsg = { role: "user", text: input };
+    setMessages([...messages, userMsg]);
+    setInput("");
+    setIsTyping(true);
+    
+    setTimeout(() => {
+      setMessages(prev => [...prev, { 
+        role: "ai", 
+        text: "Based on the internal notebook sources, I have analyzed your request.\n\nThe anomaly is likely linked to the recent vibration reports we reviewed. I recommend checking the P-102 pump metrics.", 
+        citations: ["P-102 Maintenance Log", "Vibration Thresholds SOP"]
+      }]);
+      setIsTyping(false);
+    }, 1500);
+  };
 
   return (
     <div className="flex h-full" style={{ background: "#F7F9FC" }}>
@@ -115,7 +134,7 @@ export default function ResearchNotebooks() {
                       <span>Source-grounded mode active — AI answers use only this notebook's sources</span>
                     </div>
                   )}
-                  {chatMessages.map((msg, i) => (
+                  {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                       <div className="max-w-2xl">
                         <div
@@ -142,6 +161,15 @@ export default function ResearchNotebooks() {
                       </div>
                     </div>
                   ))}
+                  {isTyping && (
+                    <div className="flex justify-start">
+                      <div className="rounded-lg px-4 py-3 text-sm flex items-center gap-2 bg-white border" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}>
+                         <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
+                         <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                         <div className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="border-t bg-white px-5 py-4 flex-shrink-0" style={{ borderColor: "var(--color-border)" }}>
                   <div className="flex gap-2">
@@ -149,11 +177,12 @@ export default function ResearchNotebooks() {
                       type="text"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAsk()}
                       placeholder="Ask about this notebook's sources..."
                       className="flex-1 px-4 py-2 text-sm rounded border outline-none"
                       style={{ borderColor: "var(--color-border)", fontSize: 13 }}
                     />
-                    <button className="px-4 py-2 rounded text-sm font-medium text-white" style={{ background: "var(--color-teal)" }}>Ask</button>
+                    <button onClick={handleAsk} disabled={isTyping} className="px-4 py-2 rounded text-sm font-medium text-white disabled:opacity-50" style={{ background: "var(--color-teal)" }}>Ask</button>
                   </div>
                 </div>
               </div>

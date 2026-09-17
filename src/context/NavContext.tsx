@@ -55,6 +55,8 @@ export type NavContextType = {
   navigate: (page: Page) => void;
   projects: Project[];
   updateProject: (name: string, updates: Partial<Project>) => void;
+  pendingSandboxTask: string | null;
+  setPendingSandboxTask: (t: string | null) => void;
 };
 
 export const NavContext = createContext<NavContextType>({
@@ -62,6 +64,8 @@ export const NavContext = createContext<NavContextType>({
   navigate: () => {},
   projects: [],
   updateProject: () => {},
+  pendingSandboxTask: null,
+  setPendingSandboxTask: () => {},
 });
 
 export const useNav = () => useContext(NavContext);

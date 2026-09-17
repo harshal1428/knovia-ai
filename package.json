@@ -10,9 +10,12 @@
     "format": "oxfmt"
   },
   "dependencies": {
+    "@types/prismjs": "^1.26.6",
     "lucide-react": "^1.46.0",
+    "prismjs": "^1.30.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-simple-code-editor": "^0.14.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

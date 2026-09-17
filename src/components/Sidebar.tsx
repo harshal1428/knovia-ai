@@ -51,7 +51,6 @@ const navGroups: NavGroup[] = [
   {
     group: "DEVELOPMENT",
     items: [
-      { label: "Coding Workspace", page: "coding-workspace", icon: "⌨" },
       { label: "Sandbox", page: "sandbox", icon: "⬜" },
     ],
   },

@@ -17,6 +17,17 @@ const clsColors: Record<string, { bg: string; color: string }> = {
 export default function KnowledgeBase() {
   const [query, setQuery] = useState("");
   const [searched, setSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const handleSearch = () => {
+    if (!query.trim()) return;
+    setIsSearching(true);
+    setSearched(false);
+    setTimeout(() => {
+      setIsSearching(false);
+      setSearched(true);
+    }, 1200);
+  };
 
   const searchResults = [
     { doc: "Inspection SOP – Pump P-102", section: "Section 4.2: Vibration Thresholds", snippet: "Bearing vibration at DE must not exceed 7.1 mm/s (peak). If exceeded, immediate isolation is required...", method: "BM25 + Vector", score: 0.94, ver: "3.2", dept: "Maintenance Eng.", cls: "CONFIDENTIAL" },
@@ -40,16 +51,18 @@ export default function KnowledgeBase() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Search MRPL knowledge base — BM25 + semantic + structured..."
               className="flex-1 px-4 py-2.5 text-sm rounded border outline-none"
               style={{ borderColor: "var(--color-border)", fontSize: 13 }}
             />
             <button
-              onClick={() => setSearched(true)}
-              className="px-5 py-2.5 rounded text-sm font-medium text-white"
+              onClick={handleSearch}
+              disabled={isSearching}
+              className="px-5 py-2.5 rounded text-sm font-medium text-white flex items-center gap-2 disabled:opacity-70 transition-colors"
               style={{ background: "var(--color-teal)" }}
             >
-              Search
+              {isSearching ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : "Search"}
             </button>
           </div>
           <div className="flex items-center gap-4 mt-3">
