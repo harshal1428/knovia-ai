@@ -48,6 +48,8 @@ Detailed project documents are available in the [`doc/`](./doc/) directory:
 
 ## 🏗️ High-Level Architecture & Tech Stack
 
+![System Architecture](./image.png)
+
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │                 SECURITY & ACCESS CONTROL                   │
