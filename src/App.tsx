@@ -82,7 +82,7 @@ const initialProjects: Project[] = [
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentPage, setCurrentPage] = useState<Page>("dashboard");
+  const [currentPage, setCurrentPage] = useState<Page>("workbench");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [pendingSandboxTask, setPendingSandboxTask] = useState<string | null>(null);

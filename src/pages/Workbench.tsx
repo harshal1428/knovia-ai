@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNav } from "../context/NavContext";
+import seedData from "../data/seed.json";
 
 type ExecutionMode = "auto" | "manual";
 type ExecutionPath = "fast" | "knowledge" | "complex" | null;
@@ -22,6 +23,8 @@ type Message = {
     type?: "doc" | "code" | "drawing";
     content?: string;
   };
+  graph?: any;
+  graph_2?: any;
 };
 
 type GenerationStep = { label: string; status: "pending" | "active" | "completed" };
@@ -71,6 +74,61 @@ const pathLabels: Record<string, string> = {
   engineering: "📐 Engineering Path · Analysis & CAD",
 };
 
+const ChartRenderer = ({ graph }: { graph: any }) => {
+  if (!graph) return null;
+  if (graph.type === "bar") {
+    const maxVal = Math.max(...graph.data.map((d: any) => d.production || d.count || d.value || 0));
+    return (
+      <div className="mt-4 p-4 border border-slate-200 rounded-xl bg-white shadow-sm w-full">
+        <h4 className="text-sm font-semibold text-slate-800 mb-4">{graph.title}</h4>
+        <div className="flex items-end gap-2 h-40">
+          {graph.data.map((d: any, idx: number) => {
+            const val = d.production || d.count || d.value || 0;
+            const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
+            return (
+              <div key={idx} className="flex-1 flex flex-col items-center justify-end group">
+                <div 
+                  className="w-full bg-teal-500 rounded-t-sm group-hover:bg-teal-400 transition-colors relative"
+                  style={{ height: `${pct}%` }}
+                >
+                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 text-[10px] bg-slate-800 text-white px-1.5 py-0.5 rounded transition-opacity">
+                    {val}
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-2 truncate w-full text-center">
+                  {d.month || d.asset || d.year}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  if (graph.type === "line") {
+    return (
+      <div className="mt-4 p-4 border border-slate-200 rounded-xl bg-white shadow-sm w-full">
+        <h4 className="text-sm font-semibold text-slate-800 mb-2">{graph.title}</h4>
+        <div className="text-xs text-slate-500 italic">[Live Line Chart: {graph.xAxis} Trend]</div>
+        <div className="flex gap-4 mt-3">
+          {graph.data ? graph.data.map((d:any, i:number) => (
+             <div key={i} className="flex flex-col items-center p-3 bg-slate-50 rounded-lg shadow-sm border border-slate-100">
+               <span className="text-sm font-bold text-teal-700">{d.pressure ?? (d.production || d.value)}</span>
+               <span className="text-[10px] text-slate-500 mt-1 uppercase font-semibold">{d.year || d.month}</span>
+             </div>
+          )) : graph.series?.map((s:any, i:number) => (
+             <div key={i} className="flex flex-col p-3 bg-slate-50 rounded-lg shadow-sm border border-slate-100 text-xs">
+                <span className="font-bold text-slate-700">{s.name} ({s.unit})</span>
+                <span className="text-[10px] mt-1 text-teal-600 font-medium">{s.data.join(" → ")}</span>
+             </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function Workbench() {
   const { navigate, projects, setPendingSandboxTask } = useNav();
   const [messages, setMessages] = useState<Message[]>(demoMessages);
@@ -86,9 +144,15 @@ export default function Workbench() {
   
   // State for Chats
   const [recentChats, setRecentChats] = useState([
-    { id: 1, title: "Current status of Project Alpha", type: "Project" },
-    { id: 2, title: "Compare latest P-102 report", type: "Project" },
-    { id: 3, title: "Personal Notes - Q3", type: "Personal" }
+    ...seedData.questions.map((q, idx) => ({
+      id: 100 + idx,
+      title: q.title,
+      type: q.execution_size,
+      questionData: q
+    })),
+    { id: 1, title: "Current status of Project Alpha", type: "Project", questionData: null },
+    { id: 2, title: "Compare latest P-102 report", type: "Project", questionData: null },
+    { id: 3, title: "Personal Notes - Q3", type: "Personal", questionData: null }
   ]);
   const [showNewChatMenu, setShowNewChatMenu] = useState(false);
   
@@ -109,11 +173,59 @@ export default function Workbench() {
     const newChat = {
       id: Date.now(),
       title: "New " + type + " Chat",
-      type: type
+      type: type,
+      questionData: null
     };
     setRecentChats([newChat, ...recentChats]);
     setMessages([]);
     setShowNewChatMenu(false);
+  };
+
+  const loadChat = (chat: any) => {
+    if (!chat.questionData) return;
+    const q = chat.questionData;
+    let path: ExecutionPath = "fast";
+    if (q.complexity.includes("Complex")) path = "complex";
+    else if (q.complexity.includes("Medium")) path = "knowledge";
+
+    let artifact = undefined;
+    if (q.artifacts && q.artifacts.length > 0) {
+      const artName = q.artifacts[0];
+      const type = (artName.endsWith(".svg") || artName.endsWith(".png") || artName.endsWith(".cad")) ? "drawing" : (artName.endsWith(".csv") || artName.endsWith(".xlsx")) ? "code" : "doc";
+      artifact = {
+        name: artName,
+        status: "approved",
+        type: type as any,
+        content: ""
+      };
+    }
+
+    const answerContent = `**${q.answer.summary}**\n\n${q.answer.details.map((d:string) => "• " + d).join("\n")}`;
+
+    const newMessages: Message[] = [
+      {
+        id: Date.now(),
+        role: "user",
+        content: q.question
+      },
+      {
+        id: Date.now() + 1,
+        role: "assistant",
+        content: answerContent,
+        meta: {
+          path: path,
+          agent: q.complexity.includes("Complex") ? "Engineering Agent" : (q.complexity.includes("Medium") ? "Knowledge Agent" : "Sovereign AI"),
+          model: "Gemini 3.1 Pro (Low)",
+          sources: q.sources ? q.sources.length : 0,
+          verified: true,
+          generationSteps: q.execution_steps.map((s:string) => ({ label: s, status: "completed" as const }))
+        },
+        artifact: artifact,
+        graph: q.graph,
+        graph_2: q.graph_2
+      }
+    ];
+    setMessages(newMessages);
   };
 
   const handleSend = () => {
@@ -442,11 +554,16 @@ if __name__ == '__main__':
             <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
               <div className="text-xs font-bold text-slate-400 tracking-wider uppercase px-2 mb-2 mt-1">Recent Chats</div>
               {recentChats.map((chat, i) => (
-                <button key={chat.id} className={`w-full flex flex-col items-start px-3 py-2 rounded-lg transition-colors truncate ${i === 0 ? "bg-slate-100" : "hover:bg-slate-50"}`} title={`Load chat: ${chat.title}`}>
+                <button 
+                  key={chat.id} 
+                  onClick={() => loadChat(chat)}
+                  className={`w-full flex flex-col items-start px-3 py-2 rounded-lg transition-colors truncate ${i === 0 ? "bg-slate-100" : "hover:bg-slate-50"}`} 
+                  title={`Load chat: ${chat.title}`}
+                >
                   <span className={`text-sm truncate w-full text-left ${i === 0 ? "text-slate-900 font-medium" : "text-slate-600"}`}>
                     {chat.title}
                   </span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded mt-1 font-bold ${chat.type === "Project" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded mt-1 font-bold ${chat.type === "Project" ? "bg-blue-100 text-blue-700" : chat.type === "Personal" ? "bg-purple-100 text-purple-700" : "bg-teal-100 text-teal-700"}`}>
                     {chat.type}
                   </span>
                 </button>
@@ -499,6 +616,8 @@ if __name__ == '__main__':
                   >
                     {msg.content}
                   </div>
+                  {msg.graph && <ChartRenderer graph={msg.graph} />}
+                  {msg.graph_2 && <ChartRenderer graph={msg.graph_2} />}
                   {msg.artifact && (
                     <div className="mt-4 p-4 bg-white border border-slate-200 rounded-xl flex flex-col shadow-sm">
                       {/* Top Row: Icon, Info, and Action Button */}
