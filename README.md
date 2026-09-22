@@ -50,25 +50,6 @@ Detailed project documents are available in the [`doc/`](./doc/) directory:
 
 ![System Architecture](./img2.png)
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                 SECURITY & ACCESS CONTROL                   │
-│ Keycloak • IAM • RBAC • Data Encryption • Policy Enforcement│
-└───────────────────────────┬─────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│               LLM ORCHESTRATION LAYER                       │
-│ Query Understanding • Task Decomposition • Dependency Graph │
-└─────────────┬──────────────┬───────────────┬────────────────┘
-              │              │               │
-              ▼              ▼               ▼
-       LOCAL AI/RAG       AGENTS          TOOLS
-              │              │               │
-              ▼              ▼               ▼
-       Qwen / OCR /     Data Analysis /   Python / Search /
-    Docling / SmolVLM    Coding / Docs    Git / File System
-```
 
 ### 🛠️ Tech Stack & Algorithms
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS
