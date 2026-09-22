@@ -16,13 +16,18 @@ Knovia AI addresses this by providing a **private, locally operated AI workbench
 
 ---
 
+## 🌐 Live Demos & Previews
+- 🖥️ **[UI Preview: Sovereign AI Workbench](https://sovereign-ai-eosin.vercel.app/)** - Explore how the user interface will look like.
+- 🏗️ **[System Architecture — Sovereign Adaptive AI Workbench](https://demo-test-alpha-ecru.vercel.app/)** - Detailed interactive system architecture.
+
+---
+
 ## 📖 Complete Project Documentation
 Detailed project documents are available in the [`doc/`](./doc/) directory:
 
 - 📄 **[Technical Documentation](./doc/TechnicalDoc.pdf)**: Comprehensive architecture, security aspects, scalability, and system components.
 - 💼 **[Business Documentation](./doc/BusinessDoc.docx)**: Market analysis, operational impact, unique selling propositions (USPs), and objectives.
 - 📊 **[Research Documentation](./doc/Research_Doc.xlsx)**: Research data, analytics, and evaluation matrix.
-- 📝 **[Full Project Details](./Sovereign_AI_Workbench_Complete_Project_Details.md)**: Extended overview of the AI workbench workflow, UI layout, query capabilities, and example scenarios.
 
 ---
 
