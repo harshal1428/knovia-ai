@@ -48,7 +48,7 @@ Detailed project documents are available in the [`doc/`](./doc/) directory:
 
 ## 🏗️ High-Level Architecture & Tech Stack
 
-![System Architecture](./image.png)
+![System Architecture](./img2.png)
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
