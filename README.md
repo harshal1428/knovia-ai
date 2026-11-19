@@ -56,7 +56,7 @@ Detailed project documents are available in the [`doc/`](./doc/) directory:
 - **Backend**: Node.js, Python, Docker, WebSockets
 - **Databases**: PostgreSQL (Relational) & Qdrant (Vector)
 - **Security**: AES-256-GCM, TLS 1.3, SHA-256, Argon2id/bcrypt
-- **Algorithms**: BGE-M3, BM25, HNSW, cosine similarity, RRF, ReAct, DAG planning, state machines
+- **Algorithms**: BGE-M3 embeddings, BM25, HNSW, cosine similarity, RRF, ReAct, DAG planning, state machines
 
 ---
 
